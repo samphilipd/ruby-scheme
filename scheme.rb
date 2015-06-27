@@ -1,4 +1,5 @@
 require 'pry'
+require 'readline'
 
 class Scheme
   #### PARSING ####
@@ -70,6 +71,7 @@ class Scheme
       :false    => false,
       :null     => nil
     }.merge(option_env)
+    @env.default = :null
   end
 
   #### EVAL ####
@@ -111,11 +113,13 @@ class Scheme
   end
 
   def repl
-    loop do
-      print "$ "
-      input_sexp = gets.chomp
+    while buf = Readline.readline("$ ", true)
+      input_sexp = buf.chomp
       puts "=> #{parseval(input_sexp)}"
     end
+  rescue Interrupt
+    puts "Goodbye!"
+    exit
   end
 end
 

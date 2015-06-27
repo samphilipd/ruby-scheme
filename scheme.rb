@@ -12,6 +12,7 @@ class Scheme
   # Reads from a list of tokens and builds a syntax tree
   # => [:begin, [:define, :r, 10], [:*, :pi, [:*, :r, :r]]]
   def read_from_tokens(tokens, tree = [])
+    fail SyntaxError, "unexpected EOF while reading (did you forget a ')'?)" unless tokens
     token = tokens.first
     next_tokens = tokens.drop(1)
     if token.nil?
@@ -49,6 +50,8 @@ class Scheme
   # Implemented functions:
   # atom?, eq?, car, cdr, cons,
   # +, -, *, /, >, <
+  # Constants:
+  # :true, :false
   def initialize(option_env = {})
     @env = {
       :pi       => Math::PI,
@@ -62,7 +65,10 @@ class Scheme
       :eq?      => ->(arg1, arg2) { arg1.hash == arg2.hash },
       :car      => ->(list) { list.first },
       :cdr      => ->(list) { list.drop(1) },
-      :cons     => ->(sexp, list) { [sexp] + list }
+      :cons     => ->(sexp, list) { [sexp] + list },
+      :true     => true,
+      :false    => false,
+      :null     => nil
     }.merge(option_env)
   end
 
@@ -81,7 +87,7 @@ class Scheme
     elsif sexp.is_a?(Numeric)
       sexp
     elsif sexp.first == :quote
-      sexp.drop(1)
+      sexp.drop(1).first
     elsif sexp.first == :if
       test = sexp[1]
       on_true = sexp[2]
@@ -92,7 +98,9 @@ class Scheme
       exp = sexp[2]
       env[var] = exp
     else
+      # binding.pry
       lambda = eval_s(sexp.first, env)
+      fail NoMethodError, "undefined lambda '#{sexp.first}'" unless lambda
       args = sexp.drop(1).map {|arg| eval_s(arg, env)}
       lambda.call(*args)
     end

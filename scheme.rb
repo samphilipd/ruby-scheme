@@ -2,6 +2,9 @@ require 'pry'
 require 'readline'
 
 class Scheme
+  class SchemeSyntaxError < StandardError; end
+  class NullLambdaError < StandardError; end
+
   #### PARSING ####
 
   # Splits a string of characters into an array of tokens, outputting e.g.
@@ -13,7 +16,7 @@ class Scheme
   # Reads from a list of tokens and builds a syntax tree
   # => [:begin, [:define, :r, 10], [:*, :pi, [:*, :r, :r]]]
   def read_from_tokens(tokens, tree = [])
-    fail SyntaxError, "unexpected EOF while reading (did you forget a ')'?)" unless tokens
+    fail SchemeSyntaxError, "unexpected EOF while reading (did you forget a ')'?)" unless tokens
     token = tokens.first
     next_tokens = tokens.drop(1)
     if token.nil?
@@ -102,7 +105,7 @@ class Scheme
     else
       # binding.pry
       lambda = eval_s(sexp.first, env)
-      fail NoMethodError, "undefined lambda '#{sexp.first}'" unless lambda
+      fail NullLambdaError, "undefined lambda '#{sexp.first}'" if lambda.nil?
       args = sexp.drop(1).map {|arg| eval_s(arg, env)}
       lambda.call(*args)
     end
@@ -114,8 +117,12 @@ class Scheme
 
   def repl
     while buf = Readline.readline("$ ", true)
-      input_sexp = buf.chomp
-      puts "=> #{parseval(input_sexp)}"
+      begin
+        input_sexp = buf.chomp
+        puts "=> #{parseval(input_sexp)}"
+      rescue NullLambdaError, SchemeSyntaxError => e
+        puts e.inspect
+      end
     end
   rescue Interrupt
     puts "Goodbye!"

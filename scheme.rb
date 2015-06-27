@@ -1,8 +1,5 @@
 require 'pry'
 
-program = "(begin (define r 10) (* pi (* r r)))"
-simple = "(* 1 2)"
-
 class Scheme
   #### PARSING ####
 
@@ -104,4 +101,20 @@ class Scheme
   def parseval(string)
     eval_s(parse(string))
   end
+
+  def repl
+    loop do
+      print "$ "
+      input_sexp = gets.chomp
+      puts "=> #{parseval(input_sexp)}"
+    end
+  end
+end
+
+if __FILE__ == $0
+  simple = "(* 1 2)"
+
+  puts "Sam's Scheme interpreter v0.1"
+  puts "Try this example s-expression: #{simple}"
+  Scheme.new.repl
 end

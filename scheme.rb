@@ -1,32 +1,28 @@
 require 'pry'
 
 program = "(begin (define r 10) (* pi (* r r)))"
+simple = "(* 1 2)"
 
-# Splits a string of characters into an array of tokens
+# Splits a string of characters into an array of tokens, outputting e.g.
+# => ["(", "begin", "(", "define", "r", "10", ")", "(", "*", "pi", "(", "*", "r", "r", ")", ")", ")"]
 def tokenize(chars)
   chars.gsub('(', ' ( ').gsub(')', ' ) ').split
 end
 
 # Reads from a list of tokens and builds a syntax tree
-def read_from_tokens(tokens)
-  fail SyntaxError, "unexpected EOF while reading" if tokens.empty?
-  token = tokens.shift
-  case token
-  when '('
-    tree = []
-    loop do
-      subtoken = tokens.first
-      if subtoken == ')'
-        tokens.shift
-        break
-      end
-      tree << read_from_tokens(tokens)
-    end
-    tree
-  when ')'
-    fail SyntaxError, "unexepected )"
+# => [:begin, [:define, :r, 10], [:*, :pi, [:*, :r, :r]]]
+def read_from_tokens(tokens, tree = [])
+  token = tokens.first
+  next_tokens = tokens.drop(1)
+  if token.nil?
+    tree.first
+  elsif token == '('
+    new_sexp, tokens_remaining = read_from_tokens(next_tokens, [])
+    read_from_tokens(tokens_remaining, tree + [new_sexp])
+  elsif token == ')'
+    [tree, next_tokens]
   else
-    atom(token)
+    read_from_tokens(next_tokens, tree + [atom(token)])
   end
 end
 
@@ -41,5 +37,4 @@ rescue ArgumentError
   end
 end
 
-binding.pry
-puts read_from_tokens(tokenize(program))
+puts read_from_tokens(tokenize(program)).inspect

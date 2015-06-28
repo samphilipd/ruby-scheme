@@ -4,6 +4,7 @@ require 'readline'
 class Scheme
   class SchemeSyntaxError < StandardError; end
   class NullLambdaError < StandardError; end
+  class EmptyListError < StandardError; end
 
   #### PARSING ####
 
@@ -67,8 +68,8 @@ class Scheme
       :<        => ->(arg1, arg2) { arg1 < arg2 },
       :atom?    => ->(sexp)  { !sexp.is_a?(Array) },
       :eq?      => ->(arg1, arg2) { arg1.hash == arg2.hash },
-      :car      => ->(list) { list.first },
-      :cdr      => ->(list) { list.drop(1) },
+      :car      => ->(list) { list.empty? ? raise(EmptyListError, "car is defined only for non-empty lists") : list.first },
+      :cdr      => ->(list) { list.empty? ? raise(EmptyListError, "car is defined only for non-empty lists") : list.drop(1) },
       :cons     => ->(sexp, list) { [sexp] + list },
       :true     => true,
       :false    => false,

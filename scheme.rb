@@ -11,12 +11,12 @@ class Scheme
   # Splits a string of characters into an array of tokens, outputting e.g.
   # => ["(", "begin", "(", "define", "r", "10", ")", "(", "*", "pi", "(", "*", "r", "r", ")", ")", ")"]
   def tokenize(chars)
-    chars.gsub('(', ' ( ').gsub(')', ' ) ').split
+    chars.gsub('(', ' ( ').gsub(')', ' ) ').split.freeze
   end
 
   # Reads from a list of tokens and builds a syntax tree
   # => [:begin, [:define, :r, 10], [:*, :pi, [:*, :r, :r]]]
-  def read_from_tokens(tokens, tree = [])
+  def read_from_tokens_recursive(tokens, tree = [])
     fail SchemeSyntaxError, "unexpected EOF while reading (did you forget a ')'?)" unless tokens
     token = tokens.first
     next_tokens = tokens.drop(1)
@@ -30,6 +30,38 @@ class Scheme
     else
       read_from_tokens(next_tokens, tree + [atom(token)])
     end
+  end
+
+  # An iterative (and probably faster) approach to building a syntax tree
+  # => [:begin, [:define, :r, 10], [:*, :pi, [:*, :r, :r]]]
+  def read_from_tokens_iterative(tokens)
+    branches = []
+    current_branch = branches
+    branch_stack = []
+    mutable_tokens = tokens.dup # avoid causing inexplicable bugs due to mutation of argument
+    result = loop do
+      token = mutable_tokens.shift
+      # puts "current branch: #{current_branch.inspect if current_branch}"
+      # puts "branches: #{branches.inspect}"
+      # puts "next token: #{token}"
+      # puts "---"
+      if token.nil?
+        fail SchemeSyntaxError, "unexpected EOF while reading (did you forget a ')'?)"
+      elsif mutable_tokens.empty?
+        break branches.any? ? branches.first : atom(token)
+      elsif token == '('
+        current_branch = []
+        branches << current_branch
+      elsif token == ')'
+        current_branch = branches.pop
+        parent_branch  = branches.last
+        parent_branch << current_branch
+        current_branch = branches.last
+      else
+        current_branch << atom(token)
+      end
+    end
+    result
   end
 
   # Casts a token to Ruby's internal representation based on type inference
@@ -57,7 +89,8 @@ class Scheme
   # +, -, *, /, >, <
   # Constants:
   # :true, :false
-  def initialize(option_env = {})
+  def initialize(reader_type = :recursive, option_env = {})
+    fail ArgumentError, "reader_type must be :recursive or :iterative" unless [:recursive, :iterative].include? reader_type
     @env = {
       :pi       => Math::PI,
       :+        => ->(*args) { args.reduce(&:+) },
@@ -65,6 +98,7 @@ class Scheme
       :*        => ->(*args) { args.reduce(&:*) },
       :/        => ->(*args) { args.reduce(&:/) },
       :>        => ->(arg1, arg2) { arg1 > arg2 },
+      :begin    => ->(*sexps) { sexps.each {|s| eval_s(s)}; sexps.last },
       :<        => ->(arg1, arg2) { arg1 < arg2 },
       :atom?    => ->(sexp)  { !sexp.is_a?(Array) },
       :eq?      => ->(arg1, arg2) { arg1.hash == arg2.hash },
@@ -76,6 +110,8 @@ class Scheme
       :null     => nil
     }.merge(option_env)
     @env.default = :null
+
+    self.class.instance_eval("alias_method :read_from_tokens, :read_from_tokens_#{reader_type}")
   end
 
   #### EVAL ####

@@ -3,11 +3,13 @@ require './scheme'
 
 class SchemeTest < Minitest::Test
   def setup
-    @scheme = Scheme.new
+    @scheme_i = Scheme.new(:iterative)
+    @scheme_r = Scheme.new(:recursive)
   end
 
   def test_math
     assert_equal 2, seval("(+ 1 1)")
+    assert_equal 7, seval("(+ 1 (* 2 (/ 6 (* 1 (/ 10 5)))))")
   end
 
   def test_define
@@ -56,10 +58,17 @@ class SchemeTest < Minitest::Test
     assert_equal [1, 2], seval("(cons 1 (cons 2 (quote ())))")
   end
 
+  def test_begin
+    assert_equal 314, seval("(begin (define r 10) (* pi (* r r)))").to_i
+  end
+
   private
 
   def seval(string)
-    @scheme.parseval(string)
+    i = @scheme_i.parseval(string)
+    r = @scheme_r.parseval(string)
+    assert_equal r, i
+    r
   end
 
 end

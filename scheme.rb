@@ -105,6 +105,7 @@ class Scheme
       :car      => ->(list) { list.empty? ? raise(EmptyListError, "car is defined only for non-empty lists") : list.first },
       :cdr      => ->(list) { list.empty? ? raise(EmptyListError, "car is defined only for non-empty lists") : list.drop(1) },
       :cons     => ->(sexp, list) { [sexp] + list },
+      :eval     => ->(sexp) { eval_s(sexp) },
       :true     => true,
       :false    => false,
       :null     => nil
@@ -156,7 +157,7 @@ class Scheme
     while buf = Readline.readline("$ ", true)
       begin
         input_sexp = buf.chomp
-        puts "=> #{parseval(input_sexp)}"
+        puts "=> #{schemestr(parseval(input_sexp))}"
       rescue NullLambdaError, SchemeSyntaxError => e
         puts e.inspect
       end
@@ -164,6 +165,15 @@ class Scheme
   rescue Interrupt
     puts "Goodbye!"
     exit
+  end
+
+  # Convert a ruby object into a Scheme-readable string
+  def schemestr(exp)
+    if exp.is_a? Array
+      '(' + exp.join(' ') + ')'
+    else
+      exp
+    end
   end
 end
 

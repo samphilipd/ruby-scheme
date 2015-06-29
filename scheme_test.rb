@@ -62,6 +62,10 @@ class SchemeTest < Minitest::Test
     assert_equal 314, seval("(begin (define r 10) (* pi (* r r)))").to_i
   end
 
+  def test_eval
+    assert_equal 3, seval("(eval (quote (+ 1 2)))")
+  end
+
   private
 
   def seval(string)
